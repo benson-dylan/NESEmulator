@@ -5,7 +5,7 @@
 
 =======
 # User ROMS
-/ROMS/
+ROMS/
 
 # User-specific files
 *.rsuser
