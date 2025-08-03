@@ -13,6 +13,7 @@ void renderFrame(SDL_Renderer* renderer, SDL_Texture* screenTex, uint32_t* frame
 
 int main(int argc, char* argv[])
 {
+    // Value determines size of window
     int scale = 3;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -58,6 +59,9 @@ int main(int argc, char* argv[])
 
     bool keep_window_open = true;
 
+    // Pixel array that gets written to every frame
+    // For debugging if screen is being rendered to
+    // PPU has own frame buffer
 	std::array<uint32_t, 256 * 240> frameBuffer;
 
     for (int y = 0; y < 240; y++) {
@@ -75,12 +79,17 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    // Cartridge is passed to the PPU and RAM both for memory purposes
+    // PPU contains VRAM and CPU has no onboard memory
+    // Cartridge contains some onboard memory as well
     PPU ppu(&cartridge);
     //APU apu;
 
     Memory memory(&cartridge, &ppu);
+    // Has access to RAM and minimal access to PPU
     CPU cpu(&memory, &ppu);
 
+    // Main render loop
     while (keep_window_open)
     {
         SDL_Event e;
@@ -94,6 +103,8 @@ int main(int argc, char* argv[])
             }
         }
 
+        // One CPU operation
+        // Triggers PPU step internally, 1 CPU step = 7 PPU Steps
         cpu.step();
 
         if (ppu.getNMI())
@@ -101,6 +112,7 @@ int main(int argc, char* argv[])
             cpu.handleNMI();
         }
 
+        // Frame rendered to screen after being marked as complete
         if (ppu.isFrameComplete())
         {
             renderFrame(renderer, screenTex, ppu.getFrameBuffer());
