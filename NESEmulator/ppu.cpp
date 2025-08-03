@@ -132,15 +132,15 @@ void PPU::step(uint32_t cpuCycles)
 			scanline++;
 
 			// Debug frame buffer dump
-			if (scanline == 239) {
-				std::ofstream dump("frame.txt");
-				for (int y = 0; y < 240; y++) {
-					for (int x = 0; x < 256; x++) {
-						dump << std::hex << frameBuffer[y * 256 + x] << " ";
-					}
-					dump << "\n";
-				}
-			}
+			//if (scanline == 239) {
+			//	std::ofstream dump("frame.txt");
+			//	for (int y = 0; y < 240; y++) {
+			//		for (int x = 0; x < 256; x++) {
+			//			dump << std::hex << frameBuffer[y * 256 + x] << " ";
+			//		}
+			//		dump << "\n";
+			//	}
+			//}
 
 			// Handle Vblank and NMI
 			if (scanline == 241)
@@ -196,6 +196,7 @@ uint8_t PPU::readRegister(uint16_t addr)
 			result = ppustatus;
 			ppustatus &= ~0x80;
 			latch = 0;
+			std::cout << "[CPU] Read from $2002 (PPUSTATUS): " << std::hex << int(result) << std::endl;
 			return result;
 		case 0x2004: // OAMDATA
 			return oamData[oamaddr];
@@ -425,13 +426,13 @@ void PPU::evaluateSprites()
 				spriteScanline[spriteCount].attributes = oamData[i * 4 + 2];
 				spriteScanline[spriteCount].x = oamData[i * 4 + 3];
 
-				std::cout << "Scanline " << scanline
-					<< " Sprite " << spriteCount
-					<< " (OAM " << i << "): Y=" << (int)spriteScanline[spriteCount].y
-					<< " X=" << (int)spriteScanline[spriteCount].x
-					<< " Tile=" << (int)spriteScanline[spriteCount].tileID
-					<< " Attr=" << std::hex << (int)spriteScanline[spriteCount].attributes
-					<< std::dec << std::endl;
+				//std::cout << "Scanline " << scanline
+				//	<< " Sprite " << spriteCount
+				//	<< " (OAM " << i << "): Y=" << (int)spriteScanline[spriteCount].y
+				//	<< " X=" << (int)spriteScanline[spriteCount].x
+				//	<< " Tile=" << (int)spriteScanline[spriteCount].tileID
+				//	<< " Attr=" << std::hex << (int)spriteScanline[spriteCount].attributes
+				//	<< std::dec << std::endl;
 
 				if (i == 0)
 					spriteZeroHit = true;

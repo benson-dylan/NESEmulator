@@ -1747,7 +1747,6 @@ void CPU::BPL()
 	cycles += 2;
 	if (!(SR & N_FLAG))
 	{
-
 		uint16_t oldPC = PC;
 		PC += offset;
 		cycles += 1;
