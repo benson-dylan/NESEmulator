@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
         }
 
         // One CPU operation
-        // Triggers PPU step internally, 1 CPU step = 7 PPU Steps
+        // Triggers PPU step internally, 1 CPU step = 3 PPU Steps
         cpu.step();
 
         if (ppu.getNMI())
