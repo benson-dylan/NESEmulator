@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 
+// Control Flags
 const uint8_t C_FLAG = 0x01; // Carry       - bit 0
 const uint8_t Z_FLAG = 0x02; // Zero        - bit 1
 const uint8_t I_FLAG = 0x04; // Interrupt   - bit 2
@@ -25,6 +26,7 @@ void CPU::reset()
 	A = X = Y = 0;
 	SR = 0x24; // Set unused flag, interrupt disable, and break flag
 	SP = 0XFD;
+	// Starting address for PC is typically stored in the last 2 addresses of memory
 	PC = (static_cast<uint16_t>(getMemory(0xFFFD)) << 8) | static_cast<uint16_t>(getMemory(0xFFFC));
 	//PC = 0x8000; // FOR TESTING
 	cycles = 0;
