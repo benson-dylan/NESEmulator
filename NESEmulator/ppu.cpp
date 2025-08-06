@@ -196,7 +196,7 @@ uint8_t PPU::readRegister(uint16_t addr)
 			result = ppustatus;
 			ppustatus &= ~0x80;
 			latch = 0;
-			std::cout << "[CPU] Read from $2002 (PPUSTATUS): " << std::hex << int(result) << std::endl;
+			//std::cout << "[CPU] Read from $2002 (PPUSTATUS): " << std::hex << int(result) << std::endl;
 			return result;
 		case 0x2004: // OAMDATA
 			return oamData[oamaddr];
@@ -277,6 +277,7 @@ uint8_t PPU::readVRAM(uint16_t addr)
 
 	if (addr < 0x2000)
 	{
+		std::cout << "[PPU] Read from CHR ROM at " << std::hex << addr << std::dec << std::endl;
 		return cartridge->chrRead(addr);
 	}
 	else if (addr < 0x3000)
@@ -426,13 +427,13 @@ void PPU::evaluateSprites()
 				spriteScanline[spriteCount].attributes = oamData[i * 4 + 2];
 				spriteScanline[spriteCount].x = oamData[i * 4 + 3];
 
-				//std::cout << "Scanline " << scanline
-				//	<< " Sprite " << spriteCount
-				//	<< " (OAM " << i << "): Y=" << (int)spriteScanline[spriteCount].y
-				//	<< " X=" << (int)spriteScanline[spriteCount].x
-				//	<< " Tile=" << (int)spriteScanline[spriteCount].tileID
-				//	<< " Attr=" << std::hex << (int)spriteScanline[spriteCount].attributes
-				//	<< std::dec << std::endl;
+				/*std::cout << "Scanline " << scanline
+					<< " Sprite " << spriteCount
+					<< " (OAM " << i << "): Y=" << (int)spriteScanline[spriteCount].y
+					<< " X=" << (int)spriteScanline[spriteCount].x
+					<< " Tile=" << (int)spriteScanline[spriteCount].tileID
+					<< " Attr=" << std::hex << (int)spriteScanline[spriteCount].attributes
+					<< std::dec << std::endl;*/
 
 				if (i == 0)
 					spriteZeroHit = true;

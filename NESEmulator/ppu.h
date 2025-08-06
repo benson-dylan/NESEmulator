@@ -54,11 +54,11 @@ private:
 
 	struct Sprite
 	{
-		uint8_t y;          // Y position
-		uint8_t x;          // X position
-		uint8_t tileID;     // Tile ID
-		uint8_t attributes; // Attributes (palette, flip, etc.)
-		uint8_t patternLow; // Low byte of the sprite pattern
+		uint8_t y;           // Y position
+		uint8_t x;           // X position
+		uint8_t tileID;      // Tile ID
+		uint8_t attributes;  // Attributes (palette, flip, etc.)
+		uint8_t patternLow;  // Low byte of the sprite pattern
 		uint8_t patternHigh; // High byte of the sprite pattern
 	};
 
