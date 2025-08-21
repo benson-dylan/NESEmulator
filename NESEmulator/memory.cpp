@@ -58,6 +58,10 @@ void Memory::write(uint16_t addr, uint8_t data)
 		//std::cout << "Write to PPU register: " << reg << " with data: " << (int)data << std::endl;
 		ppu->writeRegister(reg, data);
 	}
+	else if (addr == 0x4014) // OAMDMA register
+	{
+		ppu->setDMAPage(data);
+	}
 	else if (addr >= 0x4000 && addr <= 0x401F)
 	{
 		//apu->writeRegister(addr, data);

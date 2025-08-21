@@ -92,6 +92,7 @@ public:
 	void resetFrameComplete() { frameComplete = false; }
 
 	uint8_t getDMAPage() const { return dmaPage; }
+	void setDMAPage(uint8_t page) { dmaPage = page; }
 
 	int getScanline() const { return scanline; }
 	int getCycle() const { return cycle; }

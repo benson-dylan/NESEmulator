@@ -277,11 +277,12 @@ uint8_t PPU::readVRAM(uint16_t addr)
 
 	if (addr < 0x2000)
 	{
-		std::cout << "[PPU] Read from CHR ROM at " << std::hex << addr << std::dec << std::endl;
+		// Pattern Table Reads
 		return cartridge->chrRead(addr);
 	}
 	else if (addr < 0x3000)
 	{
+
 		uint16_t mirroredAddr = mirrorNametableAddress(addr);
 		return nameTables[mirroredAddr]; // Name Tables
 	}
@@ -411,6 +412,7 @@ void PPU::copyVerticalScrollBits()
 
 void PPU::evaluateSprites()
 {
+	//std::cout << "[PPU] Evaluating sprites for scanline " << scanline << std::endl;
 	spriteCount = 0;
 	spriteZeroHit = false;
 	uint8_t spriteHeight = (ppuctrl & 0x20) ? 16 : 8;

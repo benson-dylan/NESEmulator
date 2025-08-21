@@ -38,11 +38,13 @@ void CPU::step()
 {
 	if (ppu->isDMATriggered())
 	{
-		uint16_t dmaAddr = static_cast<uint16_t>(ppu->getDMAPage()) << 8;
+		uint16_t dmaAddr = static_cast<uint16_t>(ppu->getDMAPage()) << 12;
+		//std::cout << "DMA triggered at : " << std::hex << dmaAddr << std::endl;
 		ppu->writeRegister(0x2003, 0x00);
 		for (int i = 0; i < 256; ++i)
 		{
 			ppu->writeRegister(0x2004, getMemory(dmaAddr + i));
+			//std::cout << "DMA write: " << std::hex << dmaAddr + i << " to PPU register 0x2004" << std::endl;
 		}
 		cycles += 513 + (cycles % 2);
 		ppu->clearDMA();
