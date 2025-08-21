@@ -6,6 +6,7 @@
 =======
 # User ROMS
 /ROMS/
+NESEmulator.sln
 
 # User-specific files
 *.rsuser

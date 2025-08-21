@@ -60,49 +60,49 @@ void PPU::step(uint32_t cpuCycles)
 
 			switch (cycle % 8)
 			{
-			case 1:
-				nextTileID = readVRAM(0x2000 | (vramAddr & 0x0FFF));
-				/*std::cout << "NT Read Addr: " << std::hex << (0x2000 | (vramAddr & 0x0FFF))
-					<< ", Tile ID: " << int(nextTileID) << "\n";*/
-				break;
-			case 3: {
-				uint16_t attrAddr = 0x23C0 | (vramAddr & 0x0C00) | ((vramAddr >> 4) & 0x38) | ((vramAddr >> 2) & 0x07);
-				uint8_t attrByte = readVRAM(attrAddr);
+				case 0:
+				{
+					bgPatternShiftLow = (bgPatternShiftLow << 8) | nextTileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh << 8) | nextTileMSB;
 
-				int shift = ((vramAddr >> 4) & 4) | (vramAddr & 2);
-				nextTileAttrib = (attrByte >> shift) & 0x03;
-				break;
-			}
-			case 5:
-			{
-				uint16_t fineY = (vramAddr >> 12) & 0x07;
-				uint16_t baseTable = (ppuctrl & 0x10) ? 0x1000 : 0x0000;
-				uint16_t tileAddr = baseTable + nextTileID * 16 + fineY;
-				nextTileLSB = readVRAM(tileAddr);
-				break;
-			}
-			case 7:
-			{
-				uint16_t fineY = (vramAddr >> 12) & 0x07;
-				uint16_t baseTable = (ppuctrl & 0x10) ? 0x1000 : 0x0000;
-				uint16_t tileAddr = baseTable + nextTileID * 16 + fineY;
-				nextTileMSB = readVRAM(tileAddr + 8); // <-- Fetch MSB here
+					uint8_t attrLowBit = (nextTileAttrib & 1) ? 0xFF : 0x00;
+					uint8_t attrHighBit = (nextTileAttrib & 2) ? 0xFF : 0x00;
+					bgAttribShiftLow = (bgAttribShiftLow << 8) | attrLowBit;
+					bgAttribShiftHigh = (bgAttribShiftHigh << 8) | attrHighBit;
 
-				break;
-			}
-			case 0:
-			{
-				bgPatternShiftLow = (bgPatternShiftLow << 8) | nextTileLSB;
-				bgPatternShiftHigh = (bgPatternShiftHigh << 8) | nextTileMSB;
+					incrementScrollX();
+					break;
+				}
+				case 1:
+					nextTileID = readVRAM(0x2000 | (vramAddr & 0x0FFF));
+					/*std::cout << "NT Read Addr: " << std::hex << (0x2000 | (vramAddr & 0x0FFF))
+						<< ", Tile ID: " << int(nextTileID) << "\n";*/
+					break;
+				case 3: {
+					uint16_t attrAddr = 0x23C0 | (vramAddr & 0x0C00) | ((vramAddr >> 4) & 0x38) | ((vramAddr >> 2) & 0x07);
+					uint8_t attrByte = readVRAM(attrAddr);
 
-				uint8_t attrLowBit = (nextTileAttrib & 1) ? 0xFF : 0x00;
-				uint8_t attrHighBit = (nextTileAttrib & 2) ? 0xFF : 0x00;
-				bgAttribShiftLow = (bgAttribShiftLow << 8) | attrLowBit;
-				bgAttribShiftHigh = (bgAttribShiftHigh << 8) | attrHighBit;
+					int shift = ((vramAddr >> 4) & 4) | (vramAddr & 2);
+					nextTileAttrib = (attrByte >> shift) & 0x03;
+					break;
+				}
+				case 5:
+				{
+					uint16_t fineY = (vramAddr >> 12) & 0x07;
+					uint16_t baseTable = (ppuctrl & 0x10) ? 0x1000 : 0x0000;
+					uint16_t tileAddr = baseTable + nextTileID * 16 + fineY;
+					nextTileLSB = readVRAM(tileAddr);
+					break;
+				}
+				case 7:
+				{
+					uint16_t fineY = (vramAddr >> 12) & 0x07;
+					uint16_t baseTable = (ppuctrl & 0x10) ? 0x1000 : 0x0000;
+					uint16_t tileAddr = baseTable + nextTileID * 16 + fineY;
+					nextTileMSB = readVRAM(tileAddr + 8); // <-- Fetch MSB here
 
-				incrementScrollX();
-				break;
-			}
+					break;
+				}
 			}
 			renderPixel();
 		}
@@ -234,6 +234,7 @@ void PPU::writeRegister(uint16_t addr, uint8_t value)
 			break;
 		case 0x2004: // OAMDATA
 			oamData[oamaddr++] = value;
+			//std::cout << "[CPU] Wrote to $2004 (OAMDATA): " << std::hex << int(value) << " at OAM address " << std::dec << int(oamaddr) << std::endl;
 			break;
 		case 0x2005: // PPUSCROLL
 			if (latch == 0)
@@ -394,6 +395,7 @@ bool PPU::getNMI()
 		nmiDelay--;
 		if (nmiDelay == 0 && nmiOccurred && nmiOutput)
 		{
+			printf("PPU triggered NMI at scanline %d, cycle %d\n", scanline, cycle);
 			return true; // NMI triggered
 		}
 	}
@@ -462,6 +464,13 @@ void PPU::fetchSpritePatterns()
 		uint8_t attributes = sprite.attributes;
 		uint8_t yOffset = scanline - sprite.y;
 		bool flipVert = attributes & 0x80;
+
+		/*std::cout << "[PPU] Fetching sprite pattern for sprite " << i
+			<< " (OAM " << (i * 4) << "): Y=" << (int)sprite.y
+			<< " X=" << (int)sprite.x
+			<< " Tile=" << (int)sprite.tileID
+			<< " Attr=" << std::hex << (int)sprite.attributes
+			<< std::dec << std::endl;*/
 
 		if (flipVert)
 		{

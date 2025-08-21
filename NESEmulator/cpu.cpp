@@ -38,12 +38,12 @@ void CPU::step()
 {
 	if (ppu->isDMATriggered())
 	{
-		uint16_t dmaAddr = static_cast<uint16_t>(ppu->getDMAPage()) << 12;
+		uint16_t dmaAddr = static_cast<uint16_t>(ppu->getDMAPage()) << 8;
 		//std::cout << "DMA triggered at : " << std::hex << dmaAddr << std::endl;
-		ppu->writeRegister(0x2003, 0x00);
+		ppu->writeRegister(0x3, 0x00);
 		for (int i = 0; i < 256; ++i)
 		{
-			ppu->writeRegister(0x2004, getMemory(dmaAddr + i));
+			ppu->writeRegister(0x4, getMemory(dmaAddr + i));
 			//std::cout << "DMA write: " << std::hex << dmaAddr + i << " to PPU register 0x2004" << std::endl;
 		}
 		cycles += 513 + (cycles % 2);
@@ -1901,6 +1901,8 @@ void CPU::RTI()
 {
 	/*std::cout << "RTI ";*/
 	SR = pull();
+	SR &= ~B_FLAG; // Clear Break flag
+	SR |= U_FLAG; // Set Unused flag
 	uint8_t low = pull();
 	uint8_t high = pull();
 	PC = low | (static_cast<uint16_t>(high) << 8);
