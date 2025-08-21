@@ -27,7 +27,6 @@ PPU::PPU(Cartridge* cart)
 	nmiOccurred = false; // NMI flag
 	nmiOutput = false; // NMI output flag
 	nmiPrevious = false; // Previous NMI output state
-	nmiDelay = false; // NMI delay flag
 	frameComplete = false; // Frame complete flag
 
 	dmaPage = 0x00; // DMA Page
@@ -145,8 +144,7 @@ void PPU::step(uint32_t cpuCycles)
 			// Handle Vblank and NMI
 			if (scanline == 241)
 			{
-				//std::cout << "VBLANK TIME!!\n";
-				ppustatus |= 0x80;
+				ppustatus |= 0x80; // Set VBlank flag
 				if (nmiOutput)
 				{
 					nmiOccurred = true;
@@ -221,6 +219,7 @@ void PPU::writeRegister(uint16_t addr, uint8_t value)
 	{
 		case 0x2000: // PPUCTRL
 			ppuctrl = value;
+			ppuctrl |= 0x80;
 			tempAddr = (tempAddr & 0xF3FF) | ((value & 0x30) << 10);
 			nmiOutput = (value & 0x80) != 0;
 			//std::cout << "[CPU] Wrote to $2000 (PPUCTRL): " << std::hex << int(value) << std::endl;
@@ -395,7 +394,7 @@ bool PPU::getNMI()
 		nmiDelay--;
 		if (nmiDelay == 0 && nmiOccurred && nmiOutput)
 		{
-			printf("PPU triggered NMI at scanline %d, cycle %d\n", scanline, cycle);
+			//printf("PPU triggered NMI at scanline %d, cycle %d\n", scanline, cycle);
 			return true; // NMI triggered
 		}
 	}
@@ -509,9 +508,21 @@ void PPU::renderPixel()
     int y = scanline;
 
     // Background Rendering
-    uint8_t bit0 = (bgPatternShiftLow >> (15 - fineX)) & 1;
-    uint8_t bit1 = (bgPatternShiftHigh >> (15 - fineX)) & 1;
+    uint8_t bit0 = (bgPatternShiftLow >> 6) & 1;
+    uint8_t bit1 = (bgPatternShiftHigh >> 6) & 1;
     uint8_t paletteIndex = (bit1 << 1) | bit0;
+
+	//std::cout
+	//	<< "[PPU] Scanline " << scanline
+	//	<< " Cycle " << cycle
+	//	<< " fineX=" << (int)fineX
+	//	<< " ShiftLow=" << std::hex << (int)bgPatternShiftLow
+	//	<< " ShiftHigh=" << std::hex << (int)bgPatternShiftHigh
+	//	<< std::dec
+	//	<< " -> bit0=" << (int)bit0
+	//	<< " bit1=" << (int)bit1
+	//	<< " paletteIndex=" << (int)paletteIndex
+	//	<< std::endl;
 
     uint8_t atrr0 = (bgAttribShiftLow >> (15 - fineX)) & 1;
     uint8_t atrr1 = (bgAttribShiftHigh >> (15 - fineX)) & 1;
@@ -554,8 +565,9 @@ void PPU::renderPixel()
             spriteVisible = true;
 
             // Sprite 0 hit detection
-            if (i == 0 && bgOpaque && x < 255 && (ppumask & 0x18) == 0x18)
+            if (i == 0 && bgOpaque && x < 255 && (ppumask & 0x08) && (ppumask & 0x10))
             {
+				std::cout << "[PPU] Sprite 0 hit at scanline " << scanline << ", cycle " << cycle << std::endl;
                 ppustatus |= 0x40;
             }
 

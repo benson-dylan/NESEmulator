@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
 
 // Control Flags
 const uint8_t C_FLAG = 0x01; // Carry       - bit 0
@@ -68,9 +69,10 @@ void CPU::step()
 
 void CPU::handleNMI()
 {
+	//printf("NMI entered, PC=%04X\n", PC);
 	push((PC >> 8) & 0xFF);
 	push(PC & 0xFF);
-	push(SR & ~B_FLAG);
+	push(SR & ~B_FLAG | U_FLAG);
 	SR |= I_FLAG;
 	PC = getMemory(0xFFFA) | (static_cast<uint16_t>(getMemory(0xFFFB)) << 8);
 	cycles += 7;
@@ -2013,12 +2015,12 @@ void CPU::updateShiftFlags(uint8_t oldValue, uint8_t newValue) {
 void CPU::push(uint8_t value)
 {
 	setMemory(0x0100 + SP, value);
-	SP--;
+	SP = (SP - 1) & 0xFF;
 }
 
 uint8_t CPU::pull()
 {
-	SP++;
+	SP = (SP + 1) & 0xFF;
 	return getMemory(0x0100 + SP);
 }
 
