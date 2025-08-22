@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     // NES COMPONENTS
     Cartridge cartridge;
 
-    if (!cartridge.loadROM("../ROMS/SMB.nes"))
+    if (!cartridge.loadROM("../ROMS/DK.nes"))
     {
         std::cout << "ROM not loaded.\n";
         return -1;

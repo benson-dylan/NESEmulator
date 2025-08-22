@@ -47,6 +47,10 @@ void PPU::step(uint32_t cpuCycles)
 	{
 		/* --- Rendered Per Cycle --- */
 
+		if (scanline >= 0 && scanline < 240 && cycle >= 1 && cycle <= 256) {
+			renderPixel();
+		}
+
 		if (scanline < 240 && cycle >= 1 && cycle <= 256 && (ppumask & 0x18))
 		{
 			if ((ppumask & 0x08) || (ppumask & 0x10))
@@ -61,13 +65,13 @@ void PPU::step(uint32_t cpuCycles)
 			{
 				case 0:
 				{
-					bgPatternShiftLow = (bgPatternShiftLow << 8) | nextTileLSB;
-					bgPatternShiftHigh = (bgPatternShiftHigh << 8) | nextTileMSB;
+					bgPatternShiftLow = (bgPatternShiftLow & 0xFF00) | nextTileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh & 0xFF00) | nextTileMSB;
 
 					uint8_t attrLowBit = (nextTileAttrib & 1) ? 0xFF : 0x00;
 					uint8_t attrHighBit = (nextTileAttrib & 2) ? 0xFF : 0x00;
-					bgAttribShiftLow = (bgAttribShiftLow << 8) | attrLowBit;
-					bgAttribShiftHigh = (bgAttribShiftHigh << 8) | attrHighBit;
+					bgAttribShiftLow = (bgAttribShiftLow & 0xFF00) | attrLowBit;
+					bgAttribShiftHigh = (bgAttribShiftHigh & 0xFF00) | attrHighBit;
 
 					incrementScrollX();
 					break;
@@ -103,7 +107,6 @@ void PPU::step(uint32_t cpuCycles)
 					break;
 				}
 			}
-			renderPixel();
 		}
 
 		if (scanline < 240 || scanline == 261)
@@ -129,6 +132,7 @@ void PPU::step(uint32_t cpuCycles)
 			// Scanline complete, reset cycle
 			cycle = 0;
 			scanline++;
+
 
 			// Debug frame buffer dump
 			//if (scanline == 239) {
@@ -323,14 +327,19 @@ uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 	switch (cartridge->getMode())
 	{
 		case Cartridge::MirroringType::Vertical:
+			//printf("Mirroring: Vertical\n");
 			return (addr & 0x07FF);
 		case Cartridge::MirroringType::Horizontal:
+			//printf("Mirroring: Horizontal\n");
 			return (addr & 0x03FF) | ((addr & 0x0800) >> 1);
 		case Cartridge::MirroringType::SingleScreenUpper:
+			printf("Mirroring: Single Screen Upper\n");
 			return (addr & 0x03FF) | 0x0400;
 		case Cartridge::MirroringType::SingleScreenLower:
+			printf("Mirroring: Single Screen Lower\n");
 			return (addr & 0x03FF);
 		case Cartridge::MirroringType::FourScreen:
+			printf("Mirroring: Four Screen\n");
 			return addr;
 		default:
 			return addr & 0x07FF; // Fallback to no mirroring
@@ -508,8 +517,8 @@ void PPU::renderPixel()
     int y = scanline;
 
     // Background Rendering
-    uint8_t bit0 = (bgPatternShiftLow >> 6) & 1;
-    uint8_t bit1 = (bgPatternShiftHigh >> 6) & 1;
+	uint8_t bit0 = (bgPatternShiftLow >> 15) & 1;
+    uint8_t bit1 = (bgPatternShiftHigh >> 15) & 1;
     uint8_t paletteIndex = (bit1 << 1) | bit0;
 
 	//std::cout
@@ -534,6 +543,7 @@ void PPU::renderPixel()
         paletteAddr = 0x00;
 
     bool bgOpaque = (paletteIndex != 0);
+	//std::cout << "Opaque: " << (bgOpaque ? "Yes" : "No") << std::endl;
     uint8_t bgColor = readVRAM(0x3F00 + paletteAddr);
     if (!bgOpaque) bgColor = readVRAM(0x3F00);
 
