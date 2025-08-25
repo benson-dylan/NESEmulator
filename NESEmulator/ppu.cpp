@@ -38,10 +38,18 @@ PPU::PPU(Cartridge* cart)
 	bgPatternShiftLow = 0x00; // Background pattern shift low
 	bgAttribShiftHigh = 0x00; // Background attribute shift high
 	bgAttribShiftLow = 0x00; // Background attribute shift low
+	m_SixtyFrameTimeStart = std::time(nullptr);
+	m_SixtyFrameTimeEnd = std::time(nullptr);
 }
 
 void PPU::step(uint32_t cpuCycles)
 {
+	if (m_FrameCount%60 == 0)
+	{
+		m_SixtyFrameTimeEnd = std::time(nullptr);
+		std::cout << "FPS:" << m_FrameCount / (m_SixtyFrameTimeEnd - m_SixtyFrameTimeStart+1) << std::endl;
+	}
+		
 	//std::cout << "[PPU] Step called with " << std::dec << cpuCycles << " CPU cycles." << std::endl;
 	for (uint32_t i = 0; i < cpuCycles * 3; ++i)
 	{
@@ -183,6 +191,7 @@ void PPU::step(uint32_t cpuCycles)
 			{
 				scanline = 0;
 				frameComplete = true;
+				m_FrameCount++;
 
 				/*std::cout << "CTRL: " << std::hex << (int)ppuctrl
 					<< " Pattern Table Addr: " << ((ppuctrl & 0x10) ? "0x1000" : "0x0000") << std::endl;*/

@@ -3,6 +3,7 @@
 #include <array>
 #include <fstream>
 #include <iostream>
+#include <ctime>
 #include "cartridge.h"
 
 class PPU
@@ -13,6 +14,9 @@ private:
 	uint8_t ppumask;
 	uint8_t ppustatus;
 	uint8_t oamaddr;
+	uint32_t m_FrameCount;
+	std::time_t m_SixtyFrameTimeStart;
+	std::time_t m_SixtyFrameTimeEnd;
 
 	// VRAM Access
 	uint8_t latch;
