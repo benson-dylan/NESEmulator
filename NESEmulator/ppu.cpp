@@ -47,6 +47,15 @@ void PPU::step(uint32_t cpuCycles)
 	{
 		/* --- Rendered Per Cycle --- */
 
+		//if (scanline >= 0 && scanline < 240 && cycle == 1) {
+		//	printf("Scanline %d coarseY=%d fineY=%d coarseX=%d nametable=%d\n",
+		//		scanline,
+		//		(vramAddr >> 5) & 0x1F,
+		//		(vramAddr >> 12) & 0x7,
+		//		vramAddr & 0x1F,
+		//		(vramAddr >> 10) & 0x3);
+		//}
+
 		if (scanline >= 0 && scanline < 240 && cycle >= 1 && cycle <= 256) {
 			renderPixel();
 		}
@@ -65,13 +74,12 @@ void PPU::step(uint32_t cpuCycles)
 			{
 				case 0:
 				{
-					bgPatternShiftLow = (bgPatternShiftLow & 0xFF00) | nextTileLSB;
-					bgPatternShiftHigh = (bgPatternShiftHigh & 0xFF00) | nextTileMSB;
+					bgPatternShiftLow = (bgPatternShiftLow << 8) | nextTileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh << 8) | nextTileMSB;
 
-					uint8_t attrLowBit = (nextTileAttrib & 1) ? 0xFF : 0x00;
-					uint8_t attrHighBit = (nextTileAttrib & 2) ? 0xFF : 0x00;
-					bgAttribShiftLow = (bgAttribShiftLow & 0xFF00) | attrLowBit;
-					bgAttribShiftHigh = (bgAttribShiftHigh & 0xFF00) | attrHighBit;
+					bgAttribShiftLow = (bgAttribShiftLow << 8) | ((nextTileAttrib & 1) ? 0xFF : 0x00);
+					bgAttribShiftHigh = (bgAttribShiftHigh << 8) | ((nextTileAttrib & 2) ? 0xFF : 0x00);
+
 
 					incrementScrollX();
 					break;
@@ -323,12 +331,15 @@ void PPU::writeVRAM(uint16_t addr, uint8_t value)
 
 uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 {
-	addr = addr & 0x0FFF;
+	addr &= 0x0FFF; // Strip upper bits, only $2000–$2FFF matters
+
 	switch (cartridge->getMode())
 	{
 		case Cartridge::MirroringType::Vertical:
-			//printf("Mirroring: Vertical\n");
+			// Tables 0 & 2 are the same, 1 & 3 are the same
 			return (addr & 0x07FF);
+			break;
+
 		case Cartridge::MirroringType::Horizontal:
 			//printf("Mirroring: Horizontal\n");
 			return (addr & 0x03FF) | ((addr & 0x0800) >> 1);
@@ -339,12 +350,12 @@ uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 			printf("Mirroring: Single Screen Lower\n");
 			return (addr & 0x03FF);
 		case Cartridge::MirroringType::FourScreen:
-			printf("Mirroring: Four Screen\n");
-			return addr;
-		default:
-			return addr & 0x07FF; // Fallback to no mirroring
+			// No mirroring, keep table 0–3 unique
+			break;
 	}
+
 }
+
 
 uint8_t PPU::mirrorPaletteAddress(uint16_t addr)
 {
