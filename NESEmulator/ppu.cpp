@@ -40,13 +40,14 @@ PPU::PPU(Cartridge* cart)
 	bgAttribShiftLow = 0x00; // Background attribute shift low
 	m_SixtyFrameTimeStart = std::time(nullptr);
 	m_SixtyFrameTimeEnd = std::time(nullptr);
+	vramWrites = 0;
 }
 
 void PPU::step(uint32_t cpuCycles)
 {
 	if (m_FrameCount%60 == 0)
 	{
-		printf("Frame Count: %u\n", m_FrameCount);
+		//printf("Frame Count: %u\n", m_FrameCount);
 		m_SixtyFrameTimeEnd = std::time(nullptr);
 		//std::cout << "FPS:" << m_FrameCount / (m_SixtyFrameTimeEnd - m_SixtyFrameTimeStart+1) << std::endl;
 	}
@@ -54,7 +55,7 @@ void PPU::step(uint32_t cpuCycles)
 	if (m_FrameCount == 300)
 	{
 		//printf("NAMETABLE 131: %x\n", nameTables[131]);
-		dumpNametable();
+		//dumpNametable();
 	}
 		
 	//std::cout << "[PPU] Step called with " << std::dec << cpuCycles << " CPU cycles." << std::endl;
@@ -89,11 +90,11 @@ void PPU::step(uint32_t cpuCycles)
 			{
 				case 0:
 				{
-					bgPatternShiftLow = (bgPatternShiftLow << 8) | nextTileLSB;
-					bgPatternShiftHigh = (bgPatternShiftHigh << 8) | nextTileMSB;
+					bgPatternShiftLow = (bgPatternShiftLow) | nextTileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh) | nextTileMSB;
 
-					bgAttribShiftLow = (bgAttribShiftLow << 8) | ((nextTileAttrib & 1) ? 0xFF : 0x00);
-					bgAttribShiftHigh = (bgAttribShiftHigh << 8) | ((nextTileAttrib & 2) ? 0xFF : 0x00);
+					bgAttribShiftLow = (bgAttribShiftLow) | ((nextTileAttrib & 1) ? 0xFF : 0x00);
+					bgAttribShiftHigh = (bgAttribShiftHigh) | ((nextTileAttrib & 2) ? 0xFF : 0x00);
 
 
 					incrementScrollX();
@@ -196,6 +197,8 @@ void PPU::step(uint32_t cpuCycles)
 			// Frame complete
 			if (scanline >= 262)
 			{
+				std::cout << "VRAM WRITES = " << vramWrites << std::endl;
+				clearDebugWrites();
 				scanline = 0;
 				frameComplete = true;
 				m_FrameCount++;
@@ -308,17 +311,12 @@ uint8_t PPU::readVRAM(uint16_t addr)
 		// Pattern Table Reads
 		return cartridge->chrRead(addr);
 	}
-	else if (addr < 0x3000)
+	else if (addr < 0x3F00)
 	{
 		
 		uint16_t mirroredAddr = mirrorNametableAddress(addr);
 		//printf("Address : %x\nMirrored Addr : %x\n", addr, mirroredAddr);
 		return nameTables[mirroredAddr]; // Name Tables
-	}
-	else if (addr < 0x3F00)
-	{
-		uint16_t mirroredAddr = mirrorNametableAddress(addr - 0x1000);
-		return nameTables[mirroredAddr];
 	}
 	else if (addr < 0x4000)
 	{
@@ -335,15 +333,12 @@ void PPU::writeVRAM(uint16_t addr, uint8_t value)
 	{
 		cartridge->chrWrite(addr, value);
 	}
-	else if (addr < 0x3000)
-	{
-		uint16_t mirroredAddr = mirrorNametableAddress(addr);
-		nameTables[mirroredAddr] = value; // Name Tables
-	}
 	else if (addr < 0x3F00)
 	{
-		uint16_t mirroredAddr = mirrorNametableAddress(addr - 0x1000);
-		nameTables[mirroredAddr] = value;
+		incrementDebugWrites();
+		uint16_t mirroredAddr = mirrorNametableAddress(addr);
+		printf("Writing to Address : %x\nMirrored Addr : %d\n", addr, mirroredAddr);
+		nameTables[mirroredAddr] = value; // Name Tables
 	}
 	else if (addr < 0x4000)
 	{
@@ -353,13 +348,14 @@ void PPU::writeVRAM(uint16_t addr, uint8_t value)
 
 uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 {
-	addr &= 0x0FFF; // Strip upper bits, only $2000–$2FFF matters
 
 	switch (cartridge->getMode())
 	{
 		case Cartridge::MirroringType::Vertical:
-			return (addr & 0x07FF);
-			break;
+		{
+			uint16_t vramIndex = (addr - 0x2000) % 0x1000; // 0x000–0xFFF
+			return vramIndex % 0x800;
+		}
 		case Cartridge::MirroringType::Horizontal:
 			//printf("Mirroring: Horizontal\n");
 			return (addr & 0x03FF) | ((addr & 0x0800) >> 1);
@@ -373,7 +369,6 @@ uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 			// No mirroring, keep table 0–3 unique
 			break;
 	}
-
 }
 
 
@@ -686,9 +681,45 @@ void PPU::dumpPatternTable(std::array<uint32_t, 128 * 128>& outBuffer, int table
 }
 void PPU::dumpNametable()
 {
+	printf("NAMETABLE A: \n");
+
 	for (int y = 0; y < 30; ++y) {       // visible tiles: 32x30
 		for (int x = 0; x < 32; ++x) {
 			int index = y * 32 + x;
+			std::cout << std::hex << (int)nameTables[index] << " ";
+		}
+		std::cout << "\n";
+	}
+
+	printf("ATTRIBUTE TABLE: \n");
+
+	for (int y = 0; y < 2; ++y)
+	{
+		for (int x = 0; x < 32; ++x)
+		{
+			int index = 960 + y * 32 + x;
+			std::cout << std::hex << (int)nameTables[index] << " ";
+		}
+		std::cout << "\n";
+	}
+
+	printf("NAMETABLE B: \n");
+
+	for (int y = 0; y < 30; ++y) {       // visible tiles: 32x30
+		for (int x = 0; x < 32; ++x) {
+			int index = 1024 + y * 32 + x;
+			std::cout << std::hex << (int)nameTables[index] << " ";
+		}
+		std::cout << "\n";
+	}
+
+	printf("ATTRIBUTE TABLE: \n");
+
+	for (int y = 0; y < 2; ++y)
+	{
+		for (int x = 0; x < 32; ++x)
+		{
+			int index = 1024 + 960 + y * 32 + x;
 			std::cout << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";

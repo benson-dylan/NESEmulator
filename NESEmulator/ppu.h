@@ -70,6 +70,11 @@ private:
 	uint8_t spriteCount;
 	bool spriteZeroHit = false;
 
+	// DEBUG
+	int vramWrites;
+	void clearDebugWrites() { vramWrites = 0; }
+	void incrementDebugWrites() { vramWrites++; }
+
 public:
 	PPU(Cartridge* cart);
 
