@@ -114,6 +114,7 @@ public:
 
     uint32_t* getFrameBuffer() const { return const_cast<uint32_t*>(frameBuffer.data()); }
 	void dumpPatternTable(std::array<uint32_t, 128 * 128>& outBuffer, int tableIndex);
+	void dumpNametable();
 };
 
 //static const uint32_t NESPalette[64] = {

@@ -15,7 +15,7 @@ PPU::PPU(Cartridge* cart)
 
 	std::fill(std::begin(oamData), std::end(oamData), 0);
 	std::fill(std::begin(paletteRAM), std::end(paletteRAM), 0);
-	std::fill(std::begin(nameTables), std::end(nameTables), 0);
+	std::fill(std::begin(nameTables), std::end(nameTables), 0x99);
 	std::fill(std::begin(frameBuffer), std::end(frameBuffer), 0);
 	std::fill(std::begin(spriteScanline), std::end(spriteScanline), Sprite{ 0, 0, 0, 0, 0, 0 });
 
@@ -46,8 +46,15 @@ void PPU::step(uint32_t cpuCycles)
 {
 	if (m_FrameCount%60 == 0)
 	{
+		printf("Frame Count: %u\n", m_FrameCount);
 		m_SixtyFrameTimeEnd = std::time(nullptr);
-		std::cout << "FPS:" << m_FrameCount / (m_SixtyFrameTimeEnd - m_SixtyFrameTimeStart+1) << std::endl;
+		//std::cout << "FPS:" << m_FrameCount / (m_SixtyFrameTimeEnd - m_SixtyFrameTimeStart+1) << std::endl;
+	}
+
+	if (m_FrameCount == 300)
+	{
+		//printf("NAMETABLE 131: %x\n", nameTables[131]);
+		dumpNametable();
 	}
 		
 	//std::cout << "[PPU] Step called with " << std::dec << cpuCycles << " CPU cycles." << std::endl;
@@ -303,8 +310,9 @@ uint8_t PPU::readVRAM(uint16_t addr)
 	}
 	else if (addr < 0x3000)
 	{
-
+		
 		uint16_t mirroredAddr = mirrorNametableAddress(addr);
+		//printf("Address : %x\nMirrored Addr : %x\n", addr, mirroredAddr);
 		return nameTables[mirroredAddr]; // Name Tables
 	}
 	else if (addr < 0x3F00)
@@ -327,10 +335,15 @@ void PPU::writeVRAM(uint16_t addr, uint8_t value)
 	{
 		cartridge->chrWrite(addr, value);
 	}
-	else if (addr < 0x3F00)
+	else if (addr < 0x3000)
 	{
 		uint16_t mirroredAddr = mirrorNametableAddress(addr);
 		nameTables[mirroredAddr] = value; // Name Tables
+	}
+	else if (addr < 0x3F00)
+	{
+		uint16_t mirroredAddr = mirrorNametableAddress(addr - 0x1000);
+		nameTables[mirroredAddr] = value;
 	}
 	else if (addr < 0x4000)
 	{
@@ -345,10 +358,8 @@ uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 	switch (cartridge->getMode())
 	{
 		case Cartridge::MirroringType::Vertical:
-			// Tables 0 & 2 are the same, 1 & 3 are the same
 			return (addr & 0x07FF);
 			break;
-
 		case Cartridge::MirroringType::Horizontal:
 			//printf("Mirroring: Horizontal\n");
 			return (addr & 0x03FF) | ((addr & 0x0800) >> 1);
@@ -672,4 +683,15 @@ void PPU::dumpPatternTable(std::array<uint32_t, 128 * 128>& outBuffer, int table
 			}
 		}
 	}
+}
+void PPU::dumpNametable()
+{
+	for (int y = 0; y < 30; ++y) {       // visible tiles: 32x30
+		for (int x = 0; x < 32; ++x) {
+			int index = y * 32 + x;
+			std::cout << std::hex << (int)nameTables[index] << " ";
+		}
+		std::cout << "\n";
+	}
+	exit(0);
 }
