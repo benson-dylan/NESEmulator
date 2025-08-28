@@ -15,7 +15,7 @@ const uint8_t V_FLAG = 0x40; // Overflow    - bit 6
 const uint8_t N_FLAG = 0x80; // Negative    - bit 7
 
 
-CPU::CPU(Memory* memory, PPU* ppu)
+CPU::CPU(Memory* memory, NEW_PPU* ppu)
 {
 	this->memory = memory;
 	this->ppu = ppu;

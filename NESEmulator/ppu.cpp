@@ -1,4 +1,5 @@
 #include "ppu.h"
+#include <iomanip>
 
 PPU::PPU(Cartridge* cart)
 {
@@ -15,7 +16,7 @@ PPU::PPU(Cartridge* cart)
 
 	std::fill(std::begin(oamData), std::end(oamData), 0);
 	std::fill(std::begin(paletteRAM), std::end(paletteRAM), 0);
-	std::fill(std::begin(nameTables), std::end(nameTables), 0x99);
+	std::fill(std::begin(nameTables), std::end(nameTables), 0x00);
 	std::fill(std::begin(frameBuffer), std::end(frameBuffer), 0);
 	std::fill(std::begin(spriteScanline), std::end(spriteScanline), Sprite{ 0, 0, 0, 0, 0, 0 });
 
@@ -52,10 +53,10 @@ void PPU::step(uint32_t cpuCycles)
 		//std::cout << "FPS:" << m_FrameCount / (m_SixtyFrameTimeEnd - m_SixtyFrameTimeStart+1) << std::endl;
 	}
 
-	if (m_FrameCount == 300)
+	if (m_FrameCount == 500)
 	{
 		//printf("NAMETABLE 131: %x\n", nameTables[131]);
-		//dumpNametable();
+		dumpNametable();
 	}
 		
 	//std::cout << "[PPU] Step called with " << std::dec << cpuCycles << " CPU cycles." << std::endl;
@@ -197,7 +198,6 @@ void PPU::step(uint32_t cpuCycles)
 			// Frame complete
 			if (scanline >= 262)
 			{
-				std::cout << "VRAM WRITES = " << vramWrites << std::endl;
 				clearDebugWrites();
 				scanline = 0;
 				frameComplete = true;
@@ -222,7 +222,7 @@ uint8_t PPU::readRegister(uint16_t addr)
 	switch (addr)
 	{
 		case 0x2002: // PPUSTATUS
-			result = ppustatus;
+			result = ppustatus & 0xE0;
 			ppustatus &= ~0x80;
 			latch = 0;
 			//std::cout << "[CPU] Read from $2002 (PPUSTATUS): " << std::hex << int(result) << std::endl;
@@ -251,7 +251,7 @@ void PPU::writeRegister(uint16_t addr, uint8_t value)
 		case 0x2000: // PPUCTRL
 			ppuctrl = value;
 			ppuctrl |= 0x80;
-			tempAddr = (tempAddr & 0xF3FF) | ((value & 0x30) << 10);
+			tempAddr = (tempAddr & 0xF3FF) | ((value & 0x03) << 10);
 			nmiOutput = (value & 0x80) != 0;
 			//std::cout << "[CPU] Wrote to $2000 (PPUCTRL): " << std::hex << int(value) << std::endl;
 			break;
@@ -282,7 +282,7 @@ void PPU::writeRegister(uint16_t addr, uint8_t value)
 			break;
 		case 0x2006: // PPUADDR
 			if (latch == 0) {
-				tempAddr = (tempAddr & 0x00FF) | ((value & 0x3F) << 8);
+				tempAddr = (tempAddr & 0x60FF) | ((value & 0x3F) << 8);
 				latch = 1;
 			}
 			else {
@@ -337,7 +337,7 @@ void PPU::writeVRAM(uint16_t addr, uint8_t value)
 	{
 		incrementDebugWrites();
 		uint16_t mirroredAddr = mirrorNametableAddress(addr);
-		printf("Writing to Address : %x\nMirrored Addr : %d\n", addr, mirroredAddr);
+		/*printf("Writing to Address : %x\nMirrored Addr : %d\n", addr, mirroredAddr);*/
 		nameTables[mirroredAddr] = value; // Name Tables
 	}
 	else if (addr < 0x4000)
@@ -348,27 +348,36 @@ void PPU::writeVRAM(uint16_t addr, uint8_t value)
 
 uint16_t PPU::mirrorNametableAddress(uint16_t addr)
 {
+	// Grab last 3 digits
+	addr &= 0x0FFF;
+
+	// Determine which table it is trying to access
+	// Table 0 - 0x000 Table 1 - 0x400
+	// Table 2 - 0x800 Table 3 - 0xC00
+	uint16_t table = addr / 0x400;
+	uint16_t offset = addr % 0x400;
 
 	switch (cartridge->getMode())
 	{
-		case Cartridge::MirroringType::Vertical:
-		{
-			uint16_t vramIndex = (addr - 0x2000) % 0x1000; // 0x000–0xFFF
-			return vramIndex % 0x800;
-		}
-		case Cartridge::MirroringType::Horizontal:
-			//printf("Mirroring: Horizontal\n");
-			return (addr & 0x03FF) | ((addr & 0x0800) >> 1);
-		case Cartridge::MirroringType::SingleScreenUpper:
-			printf("Mirroring: Single Screen Upper\n");
-			return (addr & 0x03FF) | 0x0400;
-		case Cartridge::MirroringType::SingleScreenLower:
-			printf("Mirroring: Single Screen Lower\n");
-			return (addr & 0x03FF);
-		case Cartridge::MirroringType::FourScreen:
-			// No mirroring, keep table 0–3 unique
-			break;
+	case Cartridge::Vertical:
+		if (table == 2) table = 0;
+		if (table == 3) table = 1;
+		break;
+	case Cartridge::Horizontal:
+		if (table == 1) table = 0;
+		if (table == 3 || table == 2) table = 1;
+		break;
+	case Cartridge::SingleScreenLower:
+		table = 0;
+		break;
+	case Cartridge::SingleScreenUpper:
+		table = 1;
+		break;
+	case Cartridge::FourScreen:
+		break;
 	}
+
+	return table * 0x400 + offset;
 }
 
 
@@ -438,12 +447,12 @@ bool PPU::getNMI()
 
 void PPU::copyHorizontalScrollBits()
 {
-	vramAddr = (vramAddr & 0xFBE0) | (tempAddr & 0x041F);
+	vramAddr = (vramAddr & 0x7BE0) | (tempAddr & 0x041F);
 }
 
 void PPU::copyVerticalScrollBits()
 {
-	vramAddr = (vramAddr & 0x841F) | (tempAddr & 0x7BE0);
+	vramAddr = (vramAddr & 0x041F) | (tempAddr & 0x7BE0);
 }
 
 void PPU::evaluateSprites()
@@ -547,18 +556,6 @@ void PPU::renderPixel()
     uint8_t bit1 = (bgPatternShiftHigh >> 15) & 1;
     uint8_t paletteIndex = (bit1 << 1) | bit0;
 
-	//std::cout
-	//	<< "[PPU] Scanline " << scanline
-	//	<< " Cycle " << cycle
-	//	<< " fineX=" << (int)fineX
-	//	<< " ShiftLow=" << std::hex << (int)bgPatternShiftLow
-	//	<< " ShiftHigh=" << std::hex << (int)bgPatternShiftHigh
-	//	<< std::dec
-	//	<< " -> bit0=" << (int)bit0
-	//	<< " bit1=" << (int)bit1
-	//	<< " paletteIndex=" << (int)paletteIndex
-	//	<< std::endl;
-
     uint8_t atrr0 = (bgAttribShiftLow >> (15 - fineX)) & 1;
     uint8_t atrr1 = (bgAttribShiftHigh >> (15 - fineX)) & 1;
     uint8_t paletteHighBits = (atrr1 << 1) | atrr0;
@@ -603,7 +600,7 @@ void PPU::renderPixel()
             // Sprite 0 hit detection
             if (i == 0 && bgOpaque && x < 255 && (ppumask & 0x08) && (ppumask & 0x10))
             {
-				std::cout << "[PPU] Sprite 0 hit at scanline " << scanline << ", cycle " << cycle << std::endl;
+				//std::cout << "[PPU] Sprite 0 hit at scanline " << scanline << ", cycle " << cycle << std::endl;
                 ppustatus |= 0x40;
             }
 
@@ -686,7 +683,7 @@ void PPU::dumpNametable()
 	for (int y = 0; y < 30; ++y) {       // visible tiles: 32x30
 		for (int x = 0; x < 32; ++x) {
 			int index = y * 32 + x;
-			std::cout << std::hex << (int)nameTables[index] << " ";
+			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";
 	}
@@ -698,7 +695,7 @@ void PPU::dumpNametable()
 		for (int x = 0; x < 32; ++x)
 		{
 			int index = 960 + y * 32 + x;
-			std::cout << std::hex << (int)nameTables[index] << " ";
+			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";
 	}
@@ -708,7 +705,7 @@ void PPU::dumpNametable()
 	for (int y = 0; y < 30; ++y) {       // visible tiles: 32x30
 		for (int x = 0; x < 32; ++x) {
 			int index = 1024 + y * 32 + x;
-			std::cout << std::hex << (int)nameTables[index] << " ";
+			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";
 	}
@@ -720,7 +717,7 @@ void PPU::dumpNametable()
 		for (int x = 0; x < 32; ++x)
 		{
 			int index = 1024 + 960 + y * 32 + x;
-			std::cout << std::hex << (int)nameTables[index] << " ";
+			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";
 	}

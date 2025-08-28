@@ -1,7 +1,7 @@
 #include "memory.h"
 #include <iostream>
 
-Memory::Memory(Cartridge* cart, PPU* ppu, APU* apu)
+Memory::Memory(Cartridge* cart, NEW_PPU* ppu, APU* apu)
 {
 	this->cartridge = cart;
 	this->ppu = ppu;
@@ -9,7 +9,7 @@ Memory::Memory(Cartridge* cart, PPU* ppu, APU* apu)
 }
 
 // For debug only!
-Memory::Memory(Cartridge* cart, PPU* ppu)
+Memory::Memory(Cartridge* cart, NEW_PPU* ppu)
 {
 	this->cartridge = cart;
 	this->ppu = ppu;
@@ -60,6 +60,7 @@ void Memory::write(uint16_t addr, uint8_t data)
 	}
 	else if (addr == 0x4014) // OAMDMA register
 	{
+		//std::cout << "DMA write to OAMDMA with page: " << std::hex << (int)data << std::endl;
 		ppu->setDMAPage(data);
 	}
 	else if (addr >= 0x4000 && addr <= 0x401F)

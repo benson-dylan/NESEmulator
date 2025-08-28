@@ -2,6 +2,7 @@
 #include <cstdint>
 #include "cartridge.h"
 #include "ppu.h"
+#include "new_ppu.h"
 #include "apu.h"
 
 class Memory
@@ -9,12 +10,15 @@ class Memory
 private:
 	uint8_t ram[2048];
 	Cartridge* cartridge;
-	PPU* ppu;
+	//PPU* ppu;
+	NEW_PPU* ppu;
 	APU* apu;
 
 public:
 	Memory(Cartridge* cart, PPU* ppu, APU* apu);
+	Memory(Cartridge* cart, NEW_PPU* ppu, APU* apu);
 	Memory(Cartridge* cart, PPU* ppu); // For debug only!
+	Memory(Cartridge* cart, NEW_PPU* ppu);
 	Memory(Cartridge* cart); // For debug only!
 
 	uint8_t read(uint16_t addr);

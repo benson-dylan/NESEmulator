@@ -139,6 +139,7 @@
     <ClCompile Include="mapper.cpp" />
     <ClCompile Include="mapper0.cpp" />
     <ClCompile Include="memory.cpp" />
+    <ClCompile Include="new_ppu.cpp" />
     <ClCompile Include="ppu.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -147,6 +148,7 @@
     <ClInclude Include="cpu.h" />
     <ClInclude Include="mapper.h" />
     <ClInclude Include="memory.h" />
+    <ClInclude Include="new_ppu.h" />
     <ClInclude Include="ppu.h" />
   </ItemGroup>
   <ItemGroup>

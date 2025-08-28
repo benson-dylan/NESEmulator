@@ -4,11 +4,14 @@
 #include <string>
 #include "cartridge.h"
 #include "memory.h"
+#include "ppu.h"
+#include "new_ppu.h"
 
 class CPU
 {
 public:
 	CPU(Memory* memory, PPU* ppu);
+	CPU(Memory* memory, NEW_PPU* ppu);
 	void reset();
 	void step();
 	void setMemory(uint16_t address, uint8_t value);
@@ -27,7 +30,8 @@ private:
 	std::array<uint8_t, 2048> ram;
 	Cartridge cartridge;
 	Memory* memory;
-	PPU* ppu;
+	//PPU* ppu;
+	NEW_PPU* ppu;
 	bool nmiPending;
 	bool irqPending;
 

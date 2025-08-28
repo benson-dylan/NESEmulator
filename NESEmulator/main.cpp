@@ -5,6 +5,7 @@
 #include "cartridge.h"
 #include "memory.h"
 #include "ppu.h"
+#include "new_ppu.h"
 #include "apu.h"
 
 using namespace std;
@@ -28,7 +29,7 @@ int main(int argc, char* argv[])
     SDL_Window* window = SDL_CreateWindow("SDL2 Window",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        256 * scale, 240 * scale,
+        256 * scale, 224 * scale,
         SDL_WINDOW_SHOWN);
 
     if (!window)
@@ -76,7 +77,7 @@ int main(int argc, char* argv[])
     // NES COMPONENTS
     Cartridge cartridge;
 
-    if (!cartridge.loadROM("../ROMS/SMB.nes"))
+    if (!cartridge.loadROM("../ROMS/DK.nes"))
     {
         std::cout << "ROM not loaded.\n";
         return -1;
@@ -85,7 +86,10 @@ int main(int argc, char* argv[])
     // Cartridge is passed to the PPU and RAM both for memory purposes
     // PPU contains VRAM and CPU has no onboard memory
     // Cartridge contains some onboard memory as well
-    PPU ppu(&cartridge);
+    
+    //PPU ppu(&cartridge);
+    NEW_PPU ppu(&cartridge);
+
     //APU apu;
 
     Memory memory(&cartridge, &ppu);
@@ -136,11 +140,11 @@ int main(int argc, char* argv[])
         // Frame rendered to screen after being marked as complete
         if (viewNametable0)
         {
-            viewNametable(renderer, screenTex, ppu, 0x0000);
+            //viewNametable(renderer, screenTex, ppu, 0x0000);
         }
         else if (viewNametable1)
         {
-            viewNametable(renderer, screenTex, ppu, 0x1000);
+            //viewNametable(renderer, screenTex, ppu, 0x1000);
         }
         else if (ppu.isFrameComplete())
         {
