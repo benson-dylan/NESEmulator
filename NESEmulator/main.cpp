@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     SDL_Window* window = SDL_CreateWindow("SDL2 Window",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        256 * scale, 224 * scale,
+        256 * scale, 240 * scale,
         SDL_WINDOW_SHOWN);
 
     if (!window)
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     // NES COMPONENTS
     Cartridge cartridge;
 
-    if (!cartridge.loadROM("../ROMS/DK.nes"))
+    if (!cartridge.loadROM("../ROMS/SMB.nes"))
     {
         std::cout << "ROM not loaded.\n";
         return -1;

@@ -37,6 +37,7 @@ class NEW_PPU
 		// Tile Info
 		uint8_t tileID, attrByte;
 		uint8_t tileLSB, tileMSB;
+		uint8_t buffer;
 
 		uint16_t bgPatternShiftLow;
 		uint16_t bgPatternShiftHigh;

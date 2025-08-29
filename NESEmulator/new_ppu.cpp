@@ -23,10 +23,11 @@ NEW_PPU::NEW_PPU(Cartridge* cart)
 	// Initialize Array Data
 	std::fill(std::begin(oamData), std::end(oamData), 0);
 	std::fill(std::begin(paletteRAM), std::end(paletteRAM), 0);
-	std::fill(std::begin(nameTables), std::end(nameTables), 0x99);
+	std::fill(std::begin(nameTables), std::end(nameTables), 0x00);
 	std::fill(std::begin(frameBuffer), std::end(frameBuffer), 0);
 
 	tileID = 0x00;
+	buffer = 0x00;
 
 	startDMA = false;
 }
@@ -42,7 +43,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 
 	if (frame == 600)
 	{
-		//dumpNametable();
+		dumpNametable();
 	}
 
 	for (int i = 0; i < cpuCycles * 3; i++)
@@ -108,7 +109,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 						break;
 				}
 
-				if (scanline == 200 && cycle >= 65)
+				if (cycle == 65)
 				{
 					//Sprite Evaluation
 					evaluateSprites();
@@ -191,6 +192,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 			// Vblank Lines
 			if (scanline == 241 && cycle == 1)
 			{
+				//printf("VBLANK TIME\n");
 				PPUSTATUS |= 0x80;
 				if (PPUCTRL & 0x80)
 				{
@@ -199,7 +201,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 				}
 			}
 		}
-		else if (scanline >= 262)
+		else if (scanline == 262)
 		{
 			// Frame Complete
 			scanline = 0;
@@ -283,7 +285,14 @@ uint8_t NEW_PPU::readRegister(uint16_t addr)
 			result = oamData[OAMADDR];
 			break;
 		case 0x2007:
-			result = readVRAM(v);
+			if (v >= 0x3F00)
+				result = readVRAM(v);
+			else
+			{
+				result = buffer;
+				buffer = readVRAM(v);
+			}
+
 			v += (PPUCTRL & 0x04) ? 32 : 1;
 			break;
 	}
@@ -299,7 +308,7 @@ void NEW_PPU::writeRegister(uint16_t addr, uint8_t value)
 	{
 		case 0x2000:
 			PPUCTRL = value;
-			PPUCTRL |= 0x80;
+			//PPUCTRL |= 0x80;
 			t = (t & 0xF3FF) | ((value & 0x03) << 10);
 			break;
 		case 0x2001:
@@ -369,8 +378,13 @@ void NEW_PPU::writeVRAM(uint16_t addr, uint8_t value)
 {
 	addr &= 0x3FFF;
 
+	if (addr < 0x2000)
+	{
+		cartridge->chrWrite(addr, value);
+	}
 	if (addr < 0x3000)
 	{
+		//printf("Attempting to write to NameTable at address %04X with value %02X\n", mirrorNametableAddress(addr), value);
 		nameTables[mirrorNametableAddress(addr)] = value;
 	}
 	else if (addr < 0x4000)
@@ -393,6 +407,7 @@ uint16_t NEW_PPU::mirrorNametableAddress(uint16_t addr)
 	switch (cartridge->getMode())
 	{
 		case Cartridge::Vertical:
+			//printf("Vertical Mirroring\n");
 			if (table == 2) table = 0;
 			if (table == 3) table = 1;
 			break;
@@ -563,7 +578,7 @@ void NEW_PPU::renderPixel()
 			spriteVisible = true;
 
 			// Sprite 0 hit detection
-			if (i == 0 && bgOpaque && x < 255 && (PPUMASK & 0x08) && (PPUMASK & 0x10))
+			if (i == 0 && bgOpaque && x < 255 && (PPUMASK & 0x18))
 			{
 				//std::cout << "[PPU] Sprite 0 hit at scanline " << scanline << ", cycle " << cycle << std::endl;
 				PPUSTATUS |= 0x40;
