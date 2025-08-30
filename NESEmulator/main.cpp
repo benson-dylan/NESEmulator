@@ -11,7 +11,7 @@
 using namespace std;
 
 void renderFrame(SDL_Renderer* renderer, SDL_Texture* screenTex, uint32_t* frameBuffer);
-void viewNametable(SDL_Renderer* renderer, SDL_Texture* screenTex, PPU& ppu, uint16_t base);
+void viewNametable(SDL_Renderer* renderer, SDL_Texture* screenTex, NEW_PPU& ppu, uint16_t base);
 
 int main(int argc, char* argv[])
 {
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     SDL_Window* window = SDL_CreateWindow("SDL2 Window",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        256 * scale, 240 * scale,
+        256 * scale, 224 * scale,
         SDL_WINDOW_SHOWN);
 
     if (!window)
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     // NES COMPONENTS
     Cartridge cartridge;
 
-    if (!cartridge.loadROM("../ROMS/SMB.nes"))
+    if (!cartridge.loadROM("../ROMS/DK.nes"))
     {
         std::cout << "ROM not loaded.\n";
         return -1;
@@ -140,11 +140,11 @@ int main(int argc, char* argv[])
         // Frame rendered to screen after being marked as complete
         if (viewNametable0)
         {
-            //viewNametable(renderer, screenTex, ppu, 0x0000);
+            viewNametable(renderer, screenTex, ppu, 0x0000);
         }
         else if (viewNametable1)
         {
-            //viewNametable(renderer, screenTex, ppu, 0x1000);
+            viewNametable(renderer, screenTex, ppu, 0x1000);
         }
         else if (ppu.isFrameComplete())
         {
@@ -185,7 +185,7 @@ static const uint32_t palette[64] = {
     0xB8F8D8FF, 0x787878FF, 0x000000FF, 0x000000FF
 };
 
-void viewNametable(SDL_Renderer* renderer, SDL_Texture* screenTex, PPU& ppu, uint16_t base)
+void viewNametable(SDL_Renderer* renderer, SDL_Texture* screenTex, NEW_PPU& ppu, uint16_t base)
 {
     std::array<uint32_t, 256 * 240> frameBuffer;
     const int tilesPerRow = 16;

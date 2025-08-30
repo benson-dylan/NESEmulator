@@ -48,18 +48,159 @@ void NEW_PPU::step(uint32_t cpuCycles)
 
 	for (int i = 0; i < cpuCycles * 3; i++)
 	{ 
-		PPUSTATUS |= 0x40;
-		if (scanline == 261)
+		// Pre-render
+		if (scanline == 261 && PPUMASK & 0x18)
 		{
-			// Pre-render
+			if (cycle == 1)
+			{
+				PPUSTATUS &= ~0x80; // VBlank Clear
+				PPUSTATUS &= ~0x40; // Sprite Overflow Clear
+				PPUSTATUS &= ~0x20; // Sprite 0 Hit Clear
+				nmiOccurred = false;
+			}
+
+			if (cycle >= 1 && cycle <= 256)
+			{
+
+				bgPatternShiftLow <<= 1;
+				bgPatternShiftHigh <<= 1;
+				bgAttribShiftLow <<= 1;
+				bgAttribShiftHigh <<= 1;
+
+				// Background Evaluation
+				switch (cycle % 8)
+				{
+				case 0:
+					bgPatternShiftLow = (bgPatternShiftLow) | tileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh) | tileMSB;
+
+					bgAttribShiftLow = (bgAttribShiftLow) | ((attrByte & 1) ? 0xFF : 0x00);
+					bgAttribShiftHigh = (bgAttribShiftHigh) | ((attrByte & 2) ? 0xFF : 0x00);
+					incrementX();
+					break;
+				case 1:
+					// Nametable Byte
+					// Fetch tile ID from nametable
+					tileID = readVRAM(0x2000 | (v & 0x0FFF));
+					break;
+				case 3:
+				{
+					// Attribute Byte
+					attrByte = readVRAM(0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+					break;
+				}
+				case 5:
+					// Pattern Low
+					tileLSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07));
+					break;
+				case 7:
+					// Pattern High
+					tileMSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07) + 8);
+					break;
+				}
+			}
+
+			if (cycle == 256)
+				incrementY();
+
+			if (cycle >= 257 && cycle <= 320)
+			{
+				// Tile Data for Next Scanline
+				if (cycle == 257)
+					copyHorizontalScrollBits();
+
+				bgPatternShiftLow <<= 1;
+				bgPatternShiftHigh <<= 1;
+				bgAttribShiftLow <<= 1;
+				bgAttribShiftHigh <<= 1;
+
+				switch (cycle % 8)
+				{
+				case 0:
+					bgPatternShiftLow = (bgPatternShiftLow) | tileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh) | tileMSB;
+
+					bgAttribShiftLow = (bgAttribShiftLow) | ((attrByte & 1) ? 0xFF : 0x00);
+					bgAttribShiftHigh = (bgAttribShiftHigh) | ((attrByte & 2) ? 0xFF : 0x00);
+					break;
+				case 1:
+					// Nametable Byte
+					// Fetch tile ID from nametable
+					tileID = readVRAM(0x2000 | (v & 0x0FFF));
+					break;
+				case 3:
+				{
+					tileID = readVRAM(0x2000 | (v & 0x0FFF));
+					break;
+				}
+				case 5:
+					// Pattern Low
+					tileLSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07));
+					break;
+				case 7:
+					// Pattern High
+					tileMSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07) + 8);
+					break;
+				}
+			}
+
 			bool skip = frame % 2 == 1;
 			if (cycle >= 280 && cycle <= 304 && PPUMASK & 0x18)
 			{
 				copyVerticalScrollBits();
 			}
-			PPUSTATUS &= ~0x80;
+
+			if (cycle >= 321 && cycle <= 336)
+			{
+				if ((PPUMASK & 0x08) || (PPUMASK & 0x10))
+				{
+					bgPatternShiftLow <<= 1;
+					bgPatternShiftHigh <<= 1;
+					bgAttribShiftLow <<= 1;
+					bgAttribShiftHigh <<= 1;
+				}
+
+				switch (cycle % 8)
+				{
+				case 0:
+					bgPatternShiftLow = (bgPatternShiftLow) | tileLSB;
+					bgPatternShiftHigh = (bgPatternShiftHigh) | tileMSB;
+
+					bgAttribShiftLow = (bgAttribShiftLow) | ((attrByte & 1) ? 0xFF : 0x00);
+					bgAttribShiftHigh = (bgAttribShiftHigh) | ((attrByte & 2) ? 0xFF : 0x00);
+					incrementX();
+					break;
+				case 1:
+					// Nametable Byte
+					// Fetch tile ID from nametable
+					tileID = readVRAM(0x2000 | (v & 0x0FFF));
+					break;
+				case 3:
+					// Attribute Byte
+					attrByte = readVRAM(0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+					break;
+				case 5:
+					// Pattern Low
+					tileLSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07));
+					break;
+				case 7:
+					// Pattern High
+					tileMSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07) + 8);
+					break;
+				}
+			}
+			if (cycle >= 337 && cycle <= 340)
+			{
+				// Two Bytes Fetched, Unknown Purpose
+				switch (cycle % 2)
+				{
+				case 1:
+					tileID = readVRAM(0x2000 | (v & 0x0FFF));
+					break;
+				}
+			}
 		}
-		else if (scanline >= 0 && scanline <= 239 && PPUMASK & 0x18)
+		if (scanline >= 0 && scanline <= 239 && PPUMASK & 0x18)
 		{
 			// Idle Cycle
 			if (cycle == 0)
@@ -86,6 +227,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 						
 						bgAttribShiftLow = (bgAttribShiftLow) | ((attrByte & 1) ? 0xFF : 0x00);
 						bgAttribShiftHigh = (bgAttribShiftHigh) | ((attrByte & 2) ? 0xFF : 0x00);
+						incrementX();
 						break;
 					case 1:
 						// Nametable Byte
@@ -96,7 +238,6 @@ void NEW_PPU::step(uint32_t cpuCycles)
 					{
 						// Attribute Byte
 						attrByte = readVRAM(0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
-						incrementX();
 						break;
 					}
 					case 5:
@@ -121,23 +262,36 @@ void NEW_PPU::step(uint32_t cpuCycles)
 
 				renderPixel();
 			}
-			else if (cycle >= 257 && cycle <= 320)
+			if (cycle >= 257 && cycle <= 320)
 			{
 				// Tile Data for Next Scanline
 				if (cycle == 257)
 					copyHorizontalScrollBits();
 
-				switch (cycle % 8)
+				bgPatternShiftLow <<= 1;
+				bgPatternShiftHigh <<= 1;
+				bgAttribShiftLow <<= 1;
+				bgAttribShiftHigh <<= 1;
+
+				switch(cycle % 8)
 				{
+					case 0:
+						bgPatternShiftLow = (bgPatternShiftLow) | tileLSB;
+						bgPatternShiftHigh = (bgPatternShiftHigh) | tileMSB;
+
+						bgAttribShiftLow = (bgAttribShiftLow) | ((attrByte & 1) ? 0xFF : 0x00);
+						bgAttribShiftHigh = (bgAttribShiftHigh) | ((attrByte & 2) ? 0xFF : 0x00);
+						break;
 					case 1:
 						// Nametable Byte
 						// Fetch tile ID from nametable
 						tileID = readVRAM(0x2000 | (v & 0x0FFF));
 						break;
 					case 3:
-						// Attribute Byte
-						attrByte = readVRAM(0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+					{
+						tileID = readVRAM(0x2000 | (v & 0x0FFF));
 						break;
+					}
 					case 5:
 						// Pattern Low
 						tileLSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07));
@@ -148,20 +302,34 @@ void NEW_PPU::step(uint32_t cpuCycles)
 						break;
 				}
 			}
-			else if (cycle >= 321 && cycle <= 336)
+			if (cycle >= 321 && cycle <= 336)
 			{
+
+				bgPatternShiftLow <<= 1;
+				bgPatternShiftHigh <<= 1;
+				bgAttribShiftLow <<= 1;
+				bgAttribShiftHigh <<= 1;
+
+
 				switch (cycle % 8)
 				{
-					case 1:
-						// Nametable Byte
-						// Fetch tile ID from nametable
-						tileID = readVRAM(0x2000 | (v & 0x0FFF));
-						break;
-					case 3:
-						// Attribute Byte
-						attrByte = readVRAM(0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+					case 0:
+						bgPatternShiftLow = (bgPatternShiftLow) | tileLSB;
+						bgPatternShiftHigh = (bgPatternShiftHigh) | tileMSB;
+
+						bgAttribShiftLow = (bgAttribShiftLow) | ((attrByte & 1) ? 0xFF : 0x00);
+						bgAttribShiftHigh = (bgAttribShiftHigh) | ((attrByte & 2) ? 0xFF : 0x00);
 						incrementX();
 						break;
+					case 1:
+						// Nametable Byte
+						// Fetch tile ID from nametable
+						tileID = readVRAM(0x2000 | (v & 0x0FFF));
+						break;
+					case 3:
+						// Attribute Byte
+						attrByte = readVRAM(0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+						break;
 					case 5:
 						// Pattern Low
 						tileLSB = readVRAM(((PPUCTRL & 0x10) ? 0x1000 : 0x0000) + tileID * 16 + ((v >> 12) & 0x07));
@@ -172,7 +340,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 						break;
 				}
 			}
-			else if (cycle >= 337 && cycle <= 340)
+			if (cycle >= 337 && cycle <= 340)
 			{
 				// Two Bytes Fetched, Unknown Purpose
 				switch (cycle % 2)
@@ -183,11 +351,7 @@ void NEW_PPU::step(uint32_t cpuCycles)
 				}
 			}
 		}
-		else if (scanline == 240)
-		{
-			// Post-render Scanline
-		}
-		else if (scanline >= 241 && scanline <= 260)
+		if (scanline >= 241 && scanline <= 260)
 		{
 			// Vblank Lines
 			if (scanline == 241 && cycle == 1)
@@ -201,16 +365,12 @@ void NEW_PPU::step(uint32_t cpuCycles)
 				}
 			}
 		}
-		else if (scanline == 262)
+		if (scanline == 262)
 		{
 			// Frame Complete
 			scanline = 0;
 			frame++;
 			frameComplete = true;
-			PPUSTATUS &= ~0x80; // VBlank Clear
-			PPUSTATUS &= ~0x40; // Sprite Overflow Clear
-			PPUSTATUS &= ~0x20; // Sprite 0 Hit Clear
-			nmiOccurred = false;
 		}
 
 		if (cycle > 340)
@@ -644,11 +804,11 @@ void NEW_PPU::dumpNametable()
 
 	printf("ATTRIBUTE TABLE: \n");
 
-	for (int y = 0; y < 2; ++y)
+	for (int y = 0; y < 8; ++y)
 	{
-		for (int x = 0; x < 32; ++x)
+		for (int x = 0; x < 8; ++x)
 		{
-			int index = 960 + y * 32 + x;
+			int index = 960 + y * 8 + x;
 			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";
@@ -666,11 +826,11 @@ void NEW_PPU::dumpNametable()
 
 	printf("ATTRIBUTE TABLE: \n");
 
-	for (int y = 0; y < 2; ++y)
+	for (int y = 0; y < 8; ++y)
 	{
-		for (int x = 0; x < 32; ++x)
+		for (int x = 0; x < 8; ++x)
 		{
-			int index = 1024 + 960 + y * 32 + x;
+			int index = 1024 + 960 + y * 8 + x;
 			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)nameTables[index] << " ";
 		}
 		std::cout << "\n";
