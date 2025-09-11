@@ -90,9 +90,9 @@ int main(int argc, char* argv[])
     //PPU ppu(&cartridge);
     NEW_PPU ppu(&cartridge);
 
-    //APU apu;
+    APU apu;
 
-    Memory memory(&cartridge, &ppu);
+    Memory memory(&cartridge, &ppu, &apu);
     // Has access to RAM and minimal access to PPU
     CPU cpu(&memory, &ppu);
 

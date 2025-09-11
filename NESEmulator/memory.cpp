@@ -35,7 +35,7 @@ uint8_t Memory::read(uint16_t addr)
 	}
 	else if (addr >= 0x4000 && addr <= 0x401F)
 	{
-		//return apu->readRegister(addr);
+		return apu->readRegister(addr);
 	}
 	else if (addr >= 0x4020 && addr <= 0xFFFF)
 	{
@@ -65,7 +65,7 @@ void Memory::write(uint16_t addr, uint8_t data)
 	}
 	else if (addr >= 0x4000 && addr <= 0x401F)
 	{
-		//apu->writeRegister(addr, data);
+		apu->writeRegister(addr, data);
 	}
 	else if (addr >= 0x4020 && addr <= 0xFFFF)
 	{
